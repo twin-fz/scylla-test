@@ -1,8 +1,27 @@
-/******************************************************************************
 
-                              Online C++ Compiler.
-               Code, Compile, Run and Debug C++ program online.
-Write your code in this editor and press "Run" button to compile and execute it.
+/******************************************************************************
+Summary
+
+Given class A which contains public numeric template function f with argument
+std::vector<numeric type> and this vector size is predefined.
+
+Your task is to apply some operation (for example you can just simply multiply by some random
+number) on every single element of a vector in different threads and return the changed vector.
+See below the starter snippet:
+
+#include <iostream>
+class A
+{
+public:
+   template<typename T>
+   std::vector<T> f(const std::vector<T>& vec);
+   
+public:
+   static constexpr int num_threads = 8;
+   
+private:
+   std::vector<std::thread> processors_;
+};
 
 *******************************************************************************/
 
@@ -35,10 +54,10 @@ class A
         }
         
         template<typename T>
-        std::vector<T> f(const std::vector<T>& vec)
+        std::vector<T> f(const std::vector<T>& input)
         {
             // Create the output vector to the same size as input vector
-            std::vector<T> output(vec.size());
+            std::vector<T> output(input.size());
             
             // To allow multiple threads to read different elements from the input vector
             // we use an atomic index to avoid race condition between threads trying to update it.
@@ -47,31 +66,31 @@ class A
             std::atomic<int> index(-1);
             
             // This is the last index value for the input vector
-            const int maxIndex = vec.size() - 1;
+            const int maxIndex = input.size() - 1;
             
             // For this test, we create all the worker threads in this function and remove them when done
-            for (int ii = 0; ii < A::num_threads; ++ii) 
+            for (int ii = 0; ii < A::numThreads; ++ii) 
             {
                 // Each thread will execute function startThread, and process the input vector until index reaches the end
-                processors_.push_back(std::thread(A::startThread<T>, ii, vec, std::ref(output), std::ref(index), maxIndex));
+                threadList.push_back(std::thread(A::startThread<T>, ii, input, std::ref(output), std::ref(index), maxIndex));
             }
             
             // Wait for all threads to finish
-            for (int ii = 0; ii < processors_.size(); ++ii) 
+            for (int ii = 0; ii < threadList.size(); ++ii) 
             {
-                processors_[ii].join();
+                threadList[ii].join();
             }
             
-            processors_.clear();
+            threadList.clear();
             
             return output;
         }        
         
     public:
-        static constexpr int num_threads = 8;
+        static constexpr int numThreads = 8;
         
     private:
-        std::vector<std::thread> processors_;
+        std::vector<std::thread> threadList;
 };
 
 int main()
@@ -102,3 +121,4 @@ int main()
     
     return 0;
 }
+
