@@ -37,27 +37,31 @@ class A
     public:
         // Entry point for all threads
         template<typename T>
-        static void startThread(int threadNumber, const std::vector<T>& input, std::vector<T>& outVec, std::atomic<int>& index, int maxIndex)
+        static void startThread(int threadNumber, const std::vector<T>& input, std::vector<T>& outVec, std::atomic<int>& index, int maxCount)
         {
             cout << "Entering thread " << threadNumber << endl;
-            while (index < maxIndex)
+            int ii;
+            
+            // Atomic increment of index and save the value to local variable. This guarantees each thread operate on
+            // a different element in the input and output vectors
+            while ( (ii = ++index) < maxCount)
             {
-                // Atomic increment of index and save the value to local variable. This guarantees each thread operate on
-                // a different element in the input and output vectors
-                int ii = ++index;
-                
-                // Since we are reading a specify memory location from the input vector that no other thread reads,
+                // Since we are reading a specific memory location from the input vector that no other thread reads,
                 // this is safe. Likewise, the output vector location is also unique to this thead, and is thread safe.
                 outVec[ii] = input[ii] * 2;
             }
+            
             cout << "Exiting thread " << threadNumber << endl;
         }
         
         template<typename T>
         std::vector<T> f(const std::vector<T>& input)
         {
+            // Get size of input vector
+            const int maxCount = input.size();
+            
             // Create the output vector to the same size as input vector
-            std::vector<T> output(input.size());
+            std::vector<T> output(maxCount);
             
             // To allow multiple threads to read different elements from the input vector
             // we use an atomic index to avoid race condition between threads trying to update it.
@@ -65,14 +69,11 @@ class A
             // the value from the input vector to process
             std::atomic<int> index(-1);
             
-            // This is the last index value for the input vector
-            const int maxIndex = input.size() - 1;
-            
             // For this test, we create all the worker threads in this function and remove them when done
             for (int ii = 0; ii < A::numThreads; ++ii) 
             {
                 // Each thread will execute function startThread, and process the input vector until index reaches the end
-                threadList.push_back(std::thread(A::startThread<T>, ii, input, std::ref(output), std::ref(index), maxIndex));
+                threadList.push_back(std::thread(A::startThread<T>, ii, input, std::ref(output), std::ref(index), maxCount));
             }
             
             // Wait for all threads to finish
@@ -121,4 +122,3 @@ int main()
     
     return 0;
 }
-
